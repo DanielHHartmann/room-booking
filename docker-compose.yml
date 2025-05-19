@@ -1,0 +1,187 @@
+services:
+
+  # Eureka
+  service-registry:
+    image: service-registry:latest
+    container_name: service-registry
+    build:
+      context: ./back-end/service-registry
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_APPLICATION_NAME=service-registry
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+    networks:
+      - backend-network
+
+  #api-gateway
+  api-gateway:
+    image: api-gateway:latest
+    container_name: api-gateway
+    build:
+      context: ./back-end/api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_APPLICATION_NAME=api-gateway
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+    depends_on:
+      - service-registry
+    networks:
+      - backend-network
+
+  # User-service
+  user-service:
+    image: user-service:latest
+    container_name: user-service
+    build:
+      context: ./back-end/user-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_APPLICATION_NAME=user-service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://user-db:3306/user_db
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - GATEWAY_URL=http://localhost:8080/user-service
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+    depends_on:
+      - service-registry
+      - user-db
+      - rabbitmq
+    networks:
+      - backend-network
+
+  # User-db (MySQL)
+  user-db:
+    image: mysql:latest
+    container_name: user-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=user_db
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=root
+    ports:
+      - "3310:3306"
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    # Room-service
+  room-service:
+    image: room-service:latest
+    container_name: room-service
+    build:
+      context: ./back-end/room-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_APPLICATION_NAME=room-service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://room-db:3306/room_db
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - GATEWAY_URL=http://localhost:8080/room-service
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+    depends_on:
+      - service-registry
+      - room-db
+      - rabbitmq
+    networks:
+      - backend-network
+
+  # Room-db (MySQL)
+  room-db:
+    image: mysql:latest
+    container_name: room-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=room_db
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=root
+    ports:
+      - "3311:3306"
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Booking-service
+  booking-service:
+    image: booking-service:latest
+    container_name: booking-service
+    build:
+      context: ./back-end/booking-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_APPLICATION_NAME=booking-service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://booking-db:3306/booking_db
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - GATEWAY_URL=http://localhost:8080/booking-service
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+    depends_on:
+      - service-registry
+      - booking-db
+      - rabbitmq
+    networks:
+      - backend-network
+
+  # Room-db (MySQL)
+  booking-db:
+    image: mysql:latest
+    container_name: booking-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=booking_db
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=root
+    ports:
+      - "3312:3306"
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # Porta para comunicação com a aplicação
+      - "15672:15672" # Porta da interface web do RabbitMQ
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - backend-network
+
+
+networks:
+  backend-network:
+    driver: bridge
