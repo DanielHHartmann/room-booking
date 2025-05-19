@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      default-filters:
+        - StripPrefix=1
+      routes:
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/user-service/**
+        - id: user-service-swagger
+          uri: lb://user-service
+          predicates:
+            - Path=/user-service/v3/api-docs/**
+          filters:
+            - StripPrefix=1
+        - id: room-service
+          uri: lb://room-service
+          predicates:
+            - Path=/room-service/**
+        - id: booking-service
+          uri: lb://booking-service
+          predicates:
+            - Path=/booking-service/**
+
+    loadbalancer:
+      retry:
+        enabled: true
+
+server:
+  port: 8080
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://service-registry:8761/eureka/
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: User
+        url: /user-service/v3/api-docs
+      - name: Room
+        url: /room-service/v3/api-docs
+      - name: Booking
+        url: /booking-service/v3/api-docs
+  default-produces-media-type: application/json
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
