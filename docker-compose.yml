@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
 
   # Eureka
@@ -27,7 +29,8 @@ services:
       - SPRING_APPLICATION_NAME=api-gateway
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
     depends_on:
-      - service-registry
+      service-registry:
+        condition: service_started
     networks:
       - backend-network
 
@@ -51,9 +54,12 @@ services:
       - SPRING_RABBITMQ_USERNAME=guest
       - SPRING_RABBITMQ_PASSWORD=guest
     depends_on:
-      - service-registry
-      - user-db
-      - rabbitmq
+      user-db:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     networks:
       - backend-network
 
@@ -71,13 +77,13 @@ services:
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
 
-    # Room-service
+  # Room-service
   room-service:
     image: room-service:latest
     container_name: room-service
@@ -97,9 +103,12 @@ services:
       - SPRING_RABBITMQ_USERNAME=guest
       - SPRING_RABBITMQ_PASSWORD=guest
     depends_on:
-      - service-registry
-      - room-db
-      - rabbitmq
+      room-db:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     networks:
       - backend-network
 
@@ -117,7 +126,7 @@ services:
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -143,13 +152,16 @@ services:
       - SPRING_RABBITMQ_USERNAME=guest
       - SPRING_RABBITMQ_PASSWORD=guest
     depends_on:
-      - service-registry
-      - booking-db
-      - rabbitmq
+      booking-db:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     networks:
       - backend-network
 
-  # Room-db (MySQL)
+  # Booking-db (MySQL)
   booking-db:
     image: mysql:latest
     container_name: booking-db
@@ -163,24 +175,29 @@ services:
     networks:
       - backend-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
 
+  # RabbitMQ
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"   # Porta para comunicação com a aplicação
-      - "15672:15672" # Porta da interface web do RabbitMQ
+      - "5672:5672"
+      - "15672:15672"
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
     networks:
       - backend-network
-
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   backend-network:
