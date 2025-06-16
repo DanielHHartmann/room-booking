@@ -1,15 +1,14 @@
 package com.danielhhartmann.roomservice.structure.rabbit.consumer;
 
-// Use o DTO específico do RoomService aqui
 import com.danielhhartmann.roomservice.application.dto.bookingService.RoomStatusResponse;
 import com.danielhhartmann.roomservice.domain.RoomRepository;
-import com.danielhhartmann.roomservice.domain.entity.Room; // Supondo que você tenha uma entidade Room
+import com.danielhhartmann.roomservice.domain.entity.Room;
 import com.danielhhartmann.roomservice.domain.enums.RoomStatus;
 import com.danielhhartmann.roomservice.structure.config.RabbitMQConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.messaging.handler.annotation.Payload; // Opcional, mas bom para clareza
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -32,7 +31,6 @@ public class RoomMessageListener {
                 Room room = roomOptional.get();
                 boolean isAvailable = room.getStatus().equals(RoomStatus.AVAILABLE);
                 log.info("Room {} found. Status: {}, IsAvailable: {}", roomId, room.getStatus(), isAvailable);
-                // Use o DTO do room-service
                 return new com.danielhhartmann.roomservice.application.dto.bookingService.RoomStatusResponse(roomId, true, isAvailable);
             } else {
                 log.warn("Room {} not found.", roomId);

@@ -3,13 +3,13 @@ package com.danielhhartmann.bookingservice.structure.config;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.support.converter.DefaultJackson2JavaTypeMapper; // Importar
+import org.springframework.amqp.support.converter.DefaultJackson2JavaTypeMapper;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.HashMap; // Importar
-import java.util.Map;    // Importar
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
 public class RabbitMQConfig {
@@ -37,25 +37,20 @@ public class RabbitMQConfig {
     public Jackson2JsonMessageConverter messageConverter() {
         Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
 
-        // Configuração do Type Mapper para desserialização
         DefaultJackson2JavaTypeMapper typeMapper = new DefaultJackson2JavaTypeMapper();
         typeMapper.setTrustedPackages("com.danielhhartmann.bookingservice.application.dto.roomService",
-                "com.danielhhartmann.roomservice.application.dto.bookingService", // Adicionar pacote do DTO do room-service como confiável
-                "java.util", "java.lang"); // Adicionar pacotes básicos
+                "com.danielhhartmann.roomservice.application.dto.bookingService",
+                "java.util", "java.lang");
 
         Map<String, Class<?>> idClassMapping = new HashMap<>();
-        // Mapeia o __TypeId__ que vem do room-service para a classe local do booking-service
         idClassMapping.put(
-                "com.danielhhartmann.roomservice.application.dto.bookingService.RoomStatusResponse", // Type ID enviado pelo room-service
-                com.danielhhartmann.bookingservice.application.dto.roomService.RoomStatusResponse.class // Classe local no booking-service
+                "com.danielhhartmann.roomservice.application.dto.bookingService.RoomStatusResponse",
+                com.danielhhartmann.bookingservice.application.dto.roomService.RoomStatusResponse.class
         );
         typeMapper.setIdClassMapping(idClassMapping);
 
         converter.setJavaTypeMapper(typeMapper);
-        // Manter setAlwaysConvertToInferredType para que o booking-service envie seu __TypeId__ corretamente
-        // se ele precisar enviar objetos complexos como payload.
-        // Neste caso, ele está enviando um Long, que não precisa de __TypeId__ complexo.
-        // Mas para a resposta que ele recebe, o typeMapper acima resolverá.
+
         converter.setAlwaysConvertToInferredType(true);
         return converter;
     }
@@ -66,8 +61,7 @@ public class RabbitMQConfig {
                                          Jackson2JsonMessageConverter converter) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setMessageConverter(converter);
-        // O timeout já está sendo setado via application.properties (spring.rabbitmq.template.reply-timeout)
-        // template.setReplyTimeout(10000); // Ex: 10 segundos
+
         return template;
     }
 }

@@ -24,17 +24,15 @@ import java.util.List;
 public class CreateBookingUseCase {
 
     private final BookingRepository bookingRepository;
-    private final RestTemplate restTemplate; // Considere usar WebClient para chamadas não bloqueantes
+    private final RestTemplate restTemplate;
     private final RoomStatusRequester roomStatusRequester;
 
     public Booking execute(CreateBookingRequest request) {
         log.info("Attempting to create booking for user {} and room {}", request.userId(), request.roomId());
 
-        // Verifica se o usuário existe via REST
         try {
-            // TODO: Externalizar URL para application.properties
             restTemplate.getForObject(
-                    "http://user-service/users/" + request.userId(), // Assumindo que user-service está registrado no Service Discovery (e.g. Eureka)
+                    "http://user-service/users/" + request.userId(),
                     UserResponse.class
             );
             log.info("User {} found.", request.userId());
@@ -45,20 +43,18 @@ public class CreateBookingUseCase {
             }
             log.error("Failed to fetch user {} from user-service: {}", request.userId(), e.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to fetch user from user-service");
-        } catch (Exception e) { // Captura mais genérica para problemas de conexão, etc.
+        } catch (Exception e) {
             log.error("Error connecting to user-service for user {}: {}", request.userId(), e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Error connecting to user-service");
         }
 
 
-        // Verifica se sala existe e está disponível via RABBIT
         RoomStatusResponse roomStatus;
         try {
             roomStatus = roomStatusRequester.sendRoomStatusRequest(request.roomId());
             log.info("Room status for room {}: found={}, available={}", request.roomId(), roomStatus.found(), roomStatus.available());
         } catch (IllegalStateException | IllegalArgumentException e) {
             log.error("Error obtaining room status for room {}: {}", request.roomId(), e.getMessage(), e);
-            // Você pode querer mapear estas exceções para ResponseStatusException também
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to get room status: " + e.getMessage());
         }
 
@@ -72,7 +68,6 @@ public class CreateBookingUseCase {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Room " + request.roomId() + " is not available.");
         }
 
-        // Verifica se existe conflito de horários para a mesma sala
         Period newPeriod = new Period(request.startAt(), request.endAt());
         List<Booking> existingBookings = bookingRepository.findByRoomId(request.roomId());
 
